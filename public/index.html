@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Anonymous Chat</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #121212;
+            color: white;
+            text-align: center;
+        }
+        #messages {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #1f1f1f;
+            margin: 5px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        input {
+            padding: 10px;
+            width: 60%;
+        }
+        button {
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2>🔥 Anonymous Chat 🔥</h2>
+    <ul id="messages"></ul>
+    <input id="input" autocomplete="off" placeholder="Type message..." />
+    <button onclick="sendMessage()">Send</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        function sendMessage() {
+            const input = document.getElementById("input");
+            if(input.value.trim() !== ""){
+                socket.emit("chat message", input.value);
+                input.value = "";
+            }
+        }
+
+        socket.on("chat message", function(msg) {
+            const li = document.createElement("li");
+            li.textContent = msg;
+            document.getElementById("messages").appendChild(li);
+        });
+    </script>
+</body>
+</html>
