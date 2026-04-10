@@ -1,2 +1,2 @@
 live working link : :
-https://pavanmpatil806-design.github.io/chat-app/
+https://chat-app-7erd.onrender.com
