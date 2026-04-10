@@ -1,56 +1,411 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Anonymous Chat</title>
-    <style>
-        body {
-            font-family: Arial;
-            background: #121212;
-            color: white;
-            text-align: center;
-        }
-        #messages {
-            list-style: none;
-            padding: 0;
-        }
-        li {
-            background: #1f1f1f;
-            margin: 5px;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        input {
-            padding: 10px;
-            width: 60%;
-        }
-        button {
-            padding: 10px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anonymous Chat</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0e0e11;
+      color: #e4e4e7;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chat-container {
+      width: min(100%, 620px);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      background: #18181b;
+      border-left: 1px solid #27272a;
+      border-right: 1px solid #27272a;
+    }
+
+    /* ── Header ── */
+    .chat-header {
+      padding: 14px 18px;
+      background: #1c1c1f;
+      border-bottom: 1px solid #27272a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #1D9E75;
+      box-shadow: 0 0 6px #1D9E7580;
+    }
+    .header-title { font-size: 15px; font-weight: 600; }
+    .online-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 10px;
+      background: #27272a;
+      color: #a1a1aa;
+    }
+    .sound-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 16px; padding: 4px 6px;
+      border-radius: 6px; transition: background .15s;
+    }
+    .sound-btn:hover { background: #27272a; }
+
+    /* ── Messages ── */
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth;
+    }
+    .messages-area::-webkit-scrollbar { width: 4px; }
+    .messages-area::-webkit-scrollbar-track { background: transparent; }
+    .messages-area::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 2px; }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      max-width: 78%;
+      animation: slideIn .2s ease;
+    }
+    .msg.me { align-self: flex-end; align-items: flex-end; }
+    .msg.other { align-self: flex-start; align-items: flex-start; }
+
+    .msg-meta {
+      font-size: 11px;
+      color: #71717a;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 0 4px;
+    }
+    .msg-meta .sender { font-weight: 600; }
+
+    .msg-bubble {
+      padding: 9px 13px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.55;
+      word-break: break-word;
+    }
+    .msg.me .msg-bubble {
+      background: #185FA5;
+      color: #dbeafe;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.other .msg-bubble {
+      background: #27272a;
+      color: #e4e4e7;
+      border-bottom-left-radius: 4px;
+    }
+
+    /* system messages */
+    .msg.system { align-self: center; }
+    .msg.system .msg-bubble {
+      background: transparent;
+      font-size: 11px;
+      color: #52525b;
+      font-style: italic;
+      padding: 2px 6px;
+    }
+
+    /* typing indicator */
+    .typing-wrap {
+      display: none;
+      align-self: flex-start;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .typing-wrap.visible { display: flex; }
+    .typing-name { font-size: 11px; color: #71717a; padding: 0 4px; }
+    .typing-bubble {
+      padding: 10px 14px;
+      background: #27272a;
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #71717a;
+      animation: bounce 1.2s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: .2s; }
+    .dot:nth-child(3) { animation-delay: .4s; }
+
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Input row ── */
+    .input-row {
+      padding: 12px 14px;
+      background: #1c1c1f;
+      border-top: 1px solid #27272a;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .msg-input {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 14px;
+      border-radius: 22px;
+      border: 1px solid #3f3f46;
+      background: #27272a;
+      color: #e4e4e7;
+      outline: none;
+      font-family: inherit;
+      transition: border-color .15s;
+      resize: none;
+    }
+    .msg-input:focus { border-color: #378ADD; }
+    .send-btn {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      border: none;
+      background: #185FA5;
+      color: #dbeafe;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 16px;
+      transition: background .15s, transform .1s;
+    }
+    .send-btn:hover { background: #0C447C; }
+    .send-btn:active { transform: scale(.93); }
+    .send-btn svg { pointer-events: none; }
+  </style>
 </head>
 <body>
-    <h2>🔥 Anonymous Chat 🔥</h2>
-    <ul id="messages"></ul>
-    <input id="input" autocomplete="off" placeholder="Type message..." />
-    <button onclick="sendMessage()">Send</button>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
+<div class="chat-container">
 
-        function sendMessage() {
-            const input = document.getElementById("input");
-            if(input.value.trim() !== ""){
-                socket.emit("chat message", input.value);
-                input.value = "";
-            }
-        }
+  <!-- Header -->
+  <div class="chat-header">
+    <div class="header-left">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="header-title">Anonymous Chat</span>
+      <span class="online-badge" id="online-badge">connecting…</span>
+    </div>
+    <button class="sound-btn" id="sound-btn" title="Toggle sound">🔔</button>
+  </div>
 
-        socket.on("chat message", function(msg) {
-            const li = document.createElement("li");
-            li.textContent = msg;
-            document.getElementById("messages").appendChild(li);
-        });
-    </script>
+  <!-- Messages -->
+  <div class="messages-area" id="messages">
+    <!-- messages injected here -->
+    <div class="typing-wrap" id="typing-indicator">
+      <span class="typing-name" id="typing-name"></span>
+      <div class="typing-bubble">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-row">
+    <input
+      class="msg-input"
+      id="msg-input"
+      placeholder="Type a message…"
+      autocomplete="off"
+      maxlength="500"
+    />
+    <button class="send-btn" id="send-btn" title="Send">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  // ── Config ──────────────────────────────────────────────
+  const ADJECTIVES = ["Swift","Brave","Calm","Dark","Bold","Wise","Cool","Lone","Wild","Neon","Jade","Iron"];
+  const NOUNS = ["Fox","Owl","Wolf","Hawk","Bear","Lynx","Crow","Deer","Puma","Seal","Ibis","Mole"];
+  const USER_COLORS = ["#1D9E75","#D85A30","#7F77DD","#378ADD","#EF9F27","#D4537E","#E24B4A","#1D9E75"];
+
+  // ── Local state ──────────────────────────────────────────
+  const myName = randName();
+  let soundOn = true;
+  let typingTimer = null;
+  let typingUsers = {};
+
+  // ── DOM refs ─────────────────────────────────────────────
+  const messagesEl   = document.getElementById("messages");
+  const inputEl      = document.getElementById("msg-input");
+  const sendBtn      = document.getElementById("send-btn");
+  const soundBtn     = document.getElementById("sound-btn");
+  const onlineBadge  = document.getElementById("online-badge");
+  const statusDot    = document.getElementById("status-dot");
+  const typingWrap   = document.getElementById("typing-indicator");
+  const typingNameEl = document.getElementById("typing-name");
+
+  // ── Socket ───────────────────────────────────────────────
+  const socket = io();
+
+  socket.on("connect", () => {
+    statusDot.style.background = "#1D9E75";
+    statusDot.style.boxShadow  = "0 0 6px #1D9E7580";
+    socket.emit("set-name", myName);
+  });
+
+  socket.on("disconnect", () => {
+    statusDot.style.background = "#E24B4A";
+    statusDot.style.boxShadow  = "0 0 6px #E24B4A80";
+    addSystemMsg("Connection lost. Reconnecting…");
+  });
+
+  socket.on("online-count", (n) => {
+    onlineBadge.textContent = n + " online";
+  });
+
+  socket.on("user-joined", (name) => {
+    addSystemMsg(name + " joined the chat");
+  });
+
+  socket.on("user-left", (name) => {
+    addSystemMsg(name + " left the chat");
+  });
+
+  socket.on("chat message", ({ name, text, color }) => {
+    addMessage(text, "other", name, color);
+  });
+
+  socket.on("typing", ({ name }) => {
+    typingUsers[name] = true;
+    showTyping();
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      delete typingUsers[name];
+      showTyping();
+    }, 2500);
+  });
+
+  // ── Send ─────────────────────────────────────────────────
+  function send() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    socket.emit("chat message", text);
+    addMessage(text, "me", "You", null);
+    inputEl.value = "";
+    inputEl.focus();
+  }
+
+  sendBtn.addEventListener("click", send);
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  inputEl.addEventListener("input", () => {
+    socket.emit("typing");
+  });
+
+  // ── Sound toggle ─────────────────────────────────────────
+  soundBtn.addEventListener("click", () => {
+    soundOn = !soundOn;
+    soundBtn.textContent = soundOn ? "🔔" : "🔕";
+  });
+
+  // ── Render helpers ───────────────────────────────────────
+  function addMessage(text, type, name, color) {
+    const div = document.createElement("div");
+    div.className = "msg " + type;
+
+    const nameColor = type === "me" ? "#71717a" : (color || "#888");
+    const label     = type === "me" ? "You" : escapeHTML(name);
+    const time      = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    div.innerHTML =
+      `<div class="msg-meta">
+         <span class="sender" style="color:${nameColor}">${label}</span>
+         <span>${time}</span>
+       </div>
+       <div class="msg-bubble">${escapeHTML(text)}</div>`;
+
+    messagesEl.insertBefore(div, typingWrap);
+    scrollToBottom();
+    if (soundOn && type !== "system") beep(type === "me");
+  }
+
+  function addSystemMsg(text) {
+    const div = document.createElement("div");
+    div.className = "msg system";
+    div.innerHTML = `<div class="msg-bubble">${escapeHTML(text)}</div>`;
+    messagesEl.insertBefore(div, typingWrap);
+    scrollToBottom();
+  }
+
+  function showTyping() {
+    const names = Object.keys(typingUsers);
+    if (names.length === 0) {
+      typingWrap.classList.remove("visible");
+    } else {
+      typingNameEl.textContent = names.join(", ") + " is typing…";
+      typingWrap.classList.add("visible");
+      scrollToBottom();
+    }
+  }
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function escapeHTML(str) {
+    return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  // ── Audio ─────────────────────────────────────────────────
+  function beep(sent) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = sent ? 880 : 660;
+      g.gain.setValueAtTime(0.07, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      o.start(); o.stop(ctx.currentTime + 0.1);
+    } catch(e) {}
+  }
+
+  // ── Util ──────────────────────────────────────────────────
+  function randName() {
+    const a = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+    const n = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+    return a + n;
+  }
+
+  // Assign a color to this user (sent to server, broadcast to others)
+  const myColor = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+  // After connection, let server know our color too
+  socket.on("connect", () => {
+    socket.emit("set-color", myColor);
+  });
+</script>
 </body>
 </html>
